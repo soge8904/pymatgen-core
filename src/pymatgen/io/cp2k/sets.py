@@ -117,7 +117,8 @@ class DftSet(Cp2kInput):
         cell: dict[str, Any] | None = None,
         **kwargs,
     ) -> None:
-        """
+        """Initialize a DftSet.
+
         Args:
             structure: Pymatgen structure or molecule object
             basis_and_potential (dict): Basis set and pseudo-potential to use for each element.

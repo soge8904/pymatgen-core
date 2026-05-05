@@ -114,7 +114,8 @@ class Poscar(MSONable):
         lattice_velocities: ArrayLike | None = None,
         sort_structure: bool = False,
     ) -> None:
-        """
+        """Initialize a Poscar.
+
         Args:
             structure (Structure): Structure object.
             comment (str | None, optional): Optional comment line for POSCAR. Defaults to unit
@@ -722,7 +723,8 @@ class Poscar(MSONable):
 
     @classmethod
     def from_dict(cls, dct: dict) -> Self:
-        """
+        """Reconstruct Poscar from its MSONable dict representation.
+
         Args:
             dct (dict): Dict representation.
 
@@ -882,7 +884,8 @@ class Incar(UserDict, MSONable):
 
     @classmethod
     def from_dict(cls, dct: dict[str, Any]) -> Self:
-        """
+        """Reconstruct Incar from its MSONable dict representation.
+
         Args:
             dct (dict): Serialized Incar.
 
@@ -1175,7 +1178,8 @@ class KpointsSupportedModes(Enum):
 
     @classmethod
     def from_str(cls, mode: str) -> Self:
-        """
+        """Construct a KpointsSupportedModes from a string.
+
         Args:
             mode: String.
 
@@ -1313,7 +1317,8 @@ class Kpoints(MSONable):
 
     @kpts.setter
     def kpts(self, kpts: Sequence[float | int] | Sequence[Sequence[float | int]]) -> None:
-        """
+        """Set the kpoints.
+
         Args:
             kpts: Sequence[float | int] | Sequence[Sequence[float | int]].
         """
@@ -1846,7 +1851,8 @@ class Kpoints(MSONable):
 
     @classmethod
     def from_dict(cls, dct: dict[str, Any]) -> Self:
-        """
+        """Reconstruct Kpoints from its MSONable dict representation.
+
         Args:
             dct (dict): Dict representation.
 
@@ -1998,7 +2004,8 @@ class PotcarSingle:
     }
 
     def __init__(self, data: str, symbol: str | None = None) -> None:
-        """
+        """Initialize a PotcarSingle.
+
         Args:
             data (str): Complete, single and raw POTCAR file as a string.
             symbol (str): POTCAR symbol corresponding to the filename suffix
@@ -2860,7 +2867,8 @@ class Potcar(list, MSONable):
         functional: str | None = None,
         sym_potcar_map: dict[str, str] | None = None,
     ) -> None:
-        """
+        """Initialize a Potcar.
+
         Args:
             symbols (list[str]): Element symbols for POTCAR. This should correspond
                 to the symbols used by VASP. e.g. "Mg", "Fe_pv", etc.
@@ -2930,7 +2938,8 @@ class Potcar(list, MSONable):
 
     @classmethod
     def from_dict(cls, dct: dict) -> Potcar:
-        """
+        """Reconstruct Potcar from its MSONable dict representation.
+
         Args:
             dct (dict): Dict representation.
 
@@ -3112,7 +3121,8 @@ class VaspInput(dict, MSONable):
 
     @classmethod
     def from_dict(cls, dct: dict) -> Self:
-        """
+        """Reconstruct VaspInput from its MSONable dict representation.
+
         Args:
             dct (dict): Dict representation.
 

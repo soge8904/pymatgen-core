@@ -299,7 +299,8 @@ class Vasprun(MSONable):
         separate_spins: bool = False,
         exception_on_bad_xml: bool = True,
     ) -> None:
-        """
+        """Initialize a Vasprun.
+
         Args:
             filename (str): Filename to parse
             ionic_step_skip (int): If ionic_step_skip is a number > 1,
@@ -1845,7 +1846,8 @@ class BSVasprun(Vasprun):
         occu_tol: float = 1e-8,
         separate_spins: bool = False,
     ) -> None:
-        """
+        """Initialize a BSVasprun.
+
         Args:
             filename: Filename to parse
             parse_projected_eigen: Whether to parse the projected
@@ -2108,7 +2110,8 @@ class Outcar:
     """
 
     def __init__(self, filename: PathLike) -> None:
-        """
+        """Initialize an Outcar.
+
         Args:
             filename (PathLike): OUTCAR file to parse.
         """
@@ -3988,7 +3991,8 @@ class Locpot(VolumetricData):
     """LOCPOT file reader."""
 
     def __init__(self, poscar: Poscar | Structure, data: dict[str, NDArray], **kwargs) -> None:
-        """
+        """Initialize a Locpot.
+
         Args:
             poscar (Poscar | Structure): Poscat or Structure object containing structure.
             data (NDArray): Actual data.
@@ -4029,7 +4033,8 @@ class Chgcar(VolumetricData):
         data_aug: dict[str, NDArray] | None = None,
         **kwargs,
     ) -> None:
-        """
+        """Initialize a Chgcar.
+
         Args:
             poscar (Poscar | Structure): Object containing structure.
             data: Actual data.
@@ -4083,7 +4088,8 @@ class Elfcar(VolumetricData):
         data: dict[str, NDArray],
         **kwargs,
     ) -> None:
-        """
+        """Initialize an Elfcar.
+
         Args:
             poscar (Poscar or Structure): Object containing structure.
             data: Actual data.
@@ -4157,7 +4163,8 @@ class Procar(MSONable):
     """
 
     def __init__(self, filename: PathLike | list[PathLike]):
-        """
+        """Initialize a Procar.
+
         Args:
             filename: The path to PROCAR(.gz) file to read, or list of paths.
         """
@@ -4571,7 +4578,8 @@ class Oszicar:
     """
 
     def __init__(self, filename: PathLike) -> None:
-        """
+        """Initialize an Oszicar.
+
         Args:
             filename (PathLike): The file to parse.
         """
@@ -4966,7 +4974,8 @@ class Dynmat:
     """
 
     def __init__(self, filename: PathLike) -> None:
-        """
+        """Initialize a Dynmat.
+
         Args:
             filename: Name of file containing DYNMAT.
         """

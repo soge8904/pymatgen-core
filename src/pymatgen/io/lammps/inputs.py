@@ -67,7 +67,8 @@ class LammpsInputFile(InputFile):
     """
 
     def __init__(self, stages: list | None = None) -> None:
-        """
+        """Initialize a LammpsInputFile.
+
         Args:
             stages: list of LAMMPS input settings.
         """
@@ -988,7 +989,8 @@ class LammpsTemplateGen(TemplateInputGen):
         data: LammpsData | CombinedData | None = None,
         data_filename: str = "system.data",
     ) -> InputSet:
-        """
+        """Build a LAMMPS InputSet from a script template and an optional data file.
+
         Args:
             script_template: String template for input script with
                 placeholders. The format for placeholders has to be

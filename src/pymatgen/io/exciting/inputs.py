@@ -53,7 +53,8 @@ class ExcitingInput(MSONable):
         title: str | None = None,
         lockxyz: ArrayLike | None = None,
     ) -> None:
-        """
+        """Initialize an ExcitingInput.
+
         Args:
             structure (Structure): Structure object.
             title (str): Optional title for exciting input. Defaults to unit
@@ -174,7 +175,8 @@ class ExcitingInput(MSONable):
 
     @classmethod
     def from_file(cls, filename: PathLike) -> Self:
-        """
+        """Construct a ExcitingInput from a file.
+
         Args:
             filename: Filename.
 
