@@ -102,7 +102,8 @@ class GaussianInput:
         dieze_tag="#P",
         gen_basis=None,
     ):
-        """
+        """Initialize a GaussianInput.
+
         Args:
             mol: Input molecule. It can either be a Molecule object,
                 a string giving the geometry in a format supported by Gaussian,
@@ -468,7 +469,8 @@ class GaussianInput:
 
     @classmethod
     def from_dict(cls, dct: dict) -> Self:
-        """
+        """Reconstruct GaussianInput from its MSONable dict representation.
+
         Args:
             dct: dict.
 
@@ -576,7 +578,8 @@ class GaussianOutput:
     """
 
     def __init__(self, filename: PathLike) -> None:
-        """
+        """Initialize a GaussianOutput.
+
         Args:
             filename: Filename of Gaussian output file.
         """

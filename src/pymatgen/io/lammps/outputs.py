@@ -72,7 +72,8 @@ class LammpsDump(MSONable):
 
     @classmethod
     def from_dict(cls, dct: dict) -> Self:
-        """
+        """Reconstruct LammpsDump from its MSONable dict representation.
+
         Args:
             dct (dict): Dict representation.
 

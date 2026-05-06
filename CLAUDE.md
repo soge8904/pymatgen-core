@@ -1,0 +1,84 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Repository scope
+
+This is `pymatgen-core` — the trimmed core of the pymatgen ecosystem (the larger umbrella `pymatgen` package depends on this). It implements the foundational data structures (`Element`, `Site`, `Molecule`, `Structure`, `Lattice`, `Composition`), symmetry/lattice operations, the I/O layer for many DFT/MD codes (VASP, ABINIT, CIF, Gaussian, LAMMPS, CP2K, Q-Chem, …), and analysis modules. Python ≥ 3.11, src layout under `src/pymatgen/`.
+
+## Setup & common commands
+
+Dependency management is **`uv`-based** (see `[tool.uv]` in `pyproject.toml`; default groups are `dev`, `test`, `lint`, `docs`).
+
+```sh
+uv sync                       # install all default groups + project (editable)
+uv run pytest tests           # run full test suite (pytest-xdist auto-parallel via addopts)
+uv run pytest tests/core/test_structure.py::TestStructure::test_init   # single test
+uv run pytest tests/core -k "lattice"   # subset by keyword
+uv run ruff check . && uv run ruff format --check .   # lint (matches CI)
+uv run mypy -p pymatgen        # type check
+uv run pyright src             # secondary type check (CI runs this on src only)
+uv run pre-commit run --all-files
+```
+
+Build / release helpers live in `tasks.py` (pyinvoke):
+
+```sh
+uv run invoke lint             # ruff + mypy + ruff format
+uv run invoke make-doc         # Sphinx HTML API docs into docs/
+uv run invoke update-changelog # generate docs/CHANGES.md from PRs (uses OPENAPI_KEY for GPT summarization)
+uv run invoke release          # full PyPI release flow (maintainer-only)
+```
+
+## Cython extensions — important
+
+`setup.py` builds two Cython extensions:
+- `pymatgen.util.coord_cython` (`src/pymatgen/util/coord_cython.pyx`) — periodic-BC coordinate ops
+- `pymatgen.optimization.neighbors` (`src/pymatgen/optimization/neighbors.pyx`) — neighbor finding
+
+After editing any `.pyx`, you must rebuild before tests will see the change. With an editable install:
+
+```sh
+uv pip install -e . --no-build-isolation   # or: uv sync --reinstall-package pymatgen-core
+```
+
+The compiled `.so` files live next to the `.pyx` sources (e.g. `src/pymatgen/optimization/neighbors.cpython-*.so`). If imports look stale after a `.pyx` edit, that's why.
+
+## Tests — non-obvious bits
+
+- `tests/conftest.py` runs every test inside a fresh `tempfile.TemporaryDirectory` (`autouse=True`). Tests should not assume CWD is the repo root.
+- The same conftest exposes a `test_files_dir` fixture pointing at `../pymatgen-test-files` (a sibling repo, **not** the in-tree `test-files/` directory). CI sets `PMG_TEST_FILES_DIR=$GITHUB_WORKSPACE/test-files` to redirect to the in-tree copy. Locally, either clone `pymatgen-test-files` as a sibling, symlink it, or set `PMG_TEST_FILES_DIR` to the in-tree `test-files/` path.
+- `pyproject.toml` sets `addopts = "-n auto --import-mode=importlib"`. Tests must work under xdist (no shared mutable global state) and importlib mode (no implicit-namespace tricks).
+- For matplotlib-using tests in headless contexts, set `MPLBACKEND=Agg` (CI does this).
+
+## Architecture — how the pieces fit
+
+The package is intentionally a flat-ish namespace under `pymatgen.*`. The dependency direction generally goes:
+
+```
+core  →  symmetry / util  →  io / analysis / electronic_structure / phonon / transformations / alchemy / command_line
+```
+
+Key entry points re-exported from `pymatgen.core.__init__` (these are the *stable* public API surface — prefer importing from `pymatgen.core` rather than submodules):
+`Structure`, `IStructure`, `Molecule`, `IMolecule`, `Lattice`, `Site`, `PeriodicSite`, `Composition`, `Element`, `Species`, `DummySpecies`, `SymmOp`, `FloatWithUnit`, `ArrayWithUnit`, `Unit`, `get_el_sp`.
+
+Conventions enforced across the codebase:
+- **MSONable serialization.** Almost every public class implements `as_dict()` / `from_dict()` (via `monty.json.MSONable`). When adding a new class that holds materials data, follow this pattern — many downstream tools (atomate, FireWorks, Materials Project DB) rely on it.
+- **`Structure.from_file()` / `Structure.to(filename)`** are the canonical I/O entry points; format-specific classes live under `pymatgen.io.<format>` and are discovered by extension.
+- **Immutable vs mutable variants:** `IStructure`/`IMolecule` are immutable (hashable, suitable for dict keys / sets); `Structure`/`Molecule` are mutable subclasses. New analysis code that doesn't mutate should accept the `I*` form.
+- **Settings file:** `pymatgen.core.__init__` loads `~/.config/.pmgrc.yaml` (or `~/.pmgrc.yaml`, or `$PMG_CONFIG_FILE`). Settings like `PMG_VASP_PSP_DIR`, `PMG_MAPI_KEY`, `PMG_DEFAULT_FUNCTIONAL` come from there or from env vars of the same name.
+- **CLI entry point:** `pmg = "pymatgen.cli.pmg:main"` (declared in `pyproject.toml`). Wait — note: this CLI module is not in `pymatgen-core` itself; it's referenced for forward compatibility.
+
+The `dao.py` module (Data Access Object pattern, omitted from coverage) is intentionally not part of the public API.
+
+## Style & lint
+
+- Ruff config in `pyproject.toml` is **`select = ["ALL"]`** with a long ignore list. Don't fight the included rules (especially `D` pydocstyle Google convention, `I` import sorting). The required `from __future__ import annotations` import is enforced by `isort.required-imports`.
+- Line length 120.
+- Tests, `src/pymatgen/analysis/*`, `src/pymatgen/io/*`, and `dev_scripts/*` have relaxed docstring rules (see `tool.ruff.lint.per-file-ignores`).
+- `mypy` excludes `src/pymatgen/io/cp2k` and `src/pymatgen/io/lammps` — don't waste time chasing type errors there.
+- Pre-commit hooks include `codespell` (with a curated `ignore-words-list` for materials-science false positives like `Nd`, `Te`, `CoO`) and `cython-lint` for `.pyx` files.
+
+## Versioning & release
+
+Version lives in `pyproject.toml` as a calver string (`YYYY.M.D`), kept in sync with the latest tag (`v<version>`). The `invoke set-ver`, `invoke update-changelog`, and `invoke release` tasks automate the bump → changelog → tag → PyPI flow. See `ADMIN.md` for the maintainer playbook.
