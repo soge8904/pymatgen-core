@@ -32,7 +32,7 @@ from numpy.linalg import norm
 from ruamel.yaml import YAML
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.linalg import expm, polar
-from scipy.spatial.distance import squareform
+from scipy.spatial import cKDTree, distance
 from tabulate import tabulate
 
 from pymatgen.core.bonds import CovalentBond, get_bond_length
@@ -97,7 +97,8 @@ class Neighbor(Site):
         index: int = 0,
         label: str | None = None,
     ) -> None:
-        """
+        """Initialize a Neighbor.
+
         Args:
             species: Same as Site
             coords: Same as Site, but must be fractional.
@@ -109,8 +110,8 @@ class Neighbor(Site):
         self._species: Composition = species
         self.coords: NDArray = coords
         self.properties: dict = properties or {}
-        self.nn_distance: float = nn_distance
-        self.index: int = index
+        object.__setattr__(self, "nn_distance", nn_distance)
+        object.__setattr__(self, "index", index)
         self._label = label
 
     def __len__(self) -> Literal[3]:
@@ -159,7 +160,8 @@ class PeriodicNeighbor(PeriodicSite):
         image: tuple[int, int, int] = (0, 0, 0),
         label: str | None = None,
     ) -> None:
-        """
+        """Initialize a PeriodicNeighbor.
+
         Args:
             species (Composition): Same as PeriodicSite
             coords (np.ndarray): Same as PeriodicSite, but must be fractional.
@@ -174,9 +176,9 @@ class PeriodicNeighbor(PeriodicSite):
         self._frac_coords = coords
         self._species = species
         self.properties = properties or {}
-        self.nn_distance = nn_distance
-        self.index = index
-        self.image = image
+        object.__setattr__(self, "nn_distance", nn_distance)
+        object.__setattr__(self, "index", index)
+        object.__setattr__(self, "image", image)
         self._label = label
 
     def __len__(self) -> Literal[4]:
@@ -841,6 +843,7 @@ class SiteCollection(collections.abc.Sequence, ABC):
         opt_kwargs: dict | None = None,
         return_trajectory: bool = False,
         verbose: bool = False,
+        asecellfilter_kwargs: dict | None = None,
     ) -> Structure | Molecule | tuple[Structure | Molecule, TrajectoryObserver | Trajectory]:
         """Perform a structure relaxation using an ASE calculator.
 
@@ -858,6 +861,7 @@ class SiteCollection(collections.abc.Sequence, ABC):
             return_trajectory (bool): Whether to return the trajectory of relaxation.
                 Defaults to False.
             verbose (bool): whether to print stdout. Defaults to False.
+            asecellfilter_kwargs (dict): kwargs for the ASE FrechetCellFilter class.
 
         Returns:
             Structure | Molecule: Relaxed structure or molecule
@@ -870,6 +874,7 @@ class SiteCollection(collections.abc.Sequence, ABC):
         from pymatgen.io.ase import AseAtomsAdaptor
 
         opt_kwargs = opt_kwargs or {}
+        asecellfilter_kwargs = asecellfilter_kwargs or {}
         is_molecule = isinstance(self, Molecule)
         # UIP=universal interatomic potential
         run_uip = isinstance(calculator, str)
@@ -912,7 +917,7 @@ class SiteCollection(collections.abc.Sequence, ABC):
             if relax_cell:
                 if is_molecule:
                     raise ValueError("Can't relax cell for a Molecule")
-                ecf = FrechetCellFilter(atoms)
+                ecf = FrechetCellFilter(atoms, **asecellfilter_kwargs)
                 dyn = opt_class(ecf, **opt_kwargs)
             else:
                 dyn = opt_class(atoms, **opt_kwargs)
@@ -2584,6 +2589,9 @@ class IStructure(SiteCollection, MSONable):
         Returns:
             The most primitive structure found.
         """
+        if tolerance <= 0:
+            raise ValueError("tolerance cannot be <=0 for Structure.get_primitive_structure()!")
+
         if constrain_latt is None:
             constrain_latt = []
 
@@ -2611,12 +2619,24 @@ class IStructure(SiteCollection, MSONable):
         super_ftol_2 = super_ftol * 2
 
         def pbc_coord_intersection(fc1, fc2, tol):
-            """Get the fractional coords in fc1 that have coordinates
+            """
+            Get the fractional coords in fc1 that have coordinates
             within tolerance to some coordinate in fc2.
             """
-            dist = fc1[:, None, :] - fc2[None, :, :]
-            dist -= np.round(dist)
-            return fc1[np.any(np.all(dist < tol, axis=-1), axis=-1)]
+            tol = np.asarray(tol, dtype=float)
+            scale = 1.0 / tol
+            boxsize = scale
+
+            fc1_scaled = (fc1 % 1.0) * scale
+            fc2_scaled = (fc2 % 1.0) * scale
+
+            # cKDTree requires all coords strictly < boxsize
+            np.clip(fc1_scaled, 0, boxsize * (1 - 1e-15), out=fc1_scaled)
+            np.clip(fc2_scaled, 0, boxsize * (1 - 1e-15), out=fc2_scaled)
+
+            tree = cKDTree(fc2_scaled, boxsize=boxsize)
+            dist, _ = tree.query(fc1_scaled, p=np.inf, distance_upper_bound=1.0)
+            return fc1[np.isfinite(dist)]
 
         # Here we reduce the number of min_vecs by enforcing that every
         # vector in min_vecs approximately maps each site onto a similar site.
@@ -4903,7 +4923,7 @@ class Structure(IStructure, collections.abc.MutableSequence):
         if dist_mat.shape == (1, 1):
             return self
 
-        clusters = fcluster(linkage(squareform((dist_mat + dist_mat.T) / 2)), tol, "distance")
+        clusters = fcluster(linkage(distance.squareform((dist_mat + dist_mat.T) / 2)), tol, "distance")
 
         sites: list[PeriodicSite] = []
         for cluster in np.unique(clusters):
@@ -4960,6 +4980,7 @@ class Structure(IStructure, collections.abc.MutableSequence):
         opt_kwargs: dict | None = None,
         return_trajectory: bool = False,
         verbose: bool = False,
+        asecellfilter_kwargs: dict | None = None,
     ) -> Structure | tuple[Structure, TrajectoryObserver | Trajectory]:
         """Perform a crystal structure relaxation using an ASE calculator.
 
@@ -4977,6 +4998,7 @@ class Structure(IStructure, collections.abc.MutableSequence):
             return_trajectory (bool): Whether to return the trajectory of relaxation.
                 Defaults to False.
             verbose (bool): whether to print out relaxation steps. Defaults to False.
+            asecellfilter_kwargs (dict): kwargs for the ASE FrechetCellFilter class.
 
         Returns:
             Structure | tuple[Structure, Trajectory]: Relaxed structure or if return_trajectory=True,
@@ -4992,6 +5014,7 @@ class Structure(IStructure, collections.abc.MutableSequence):
             opt_kwargs=opt_kwargs,
             return_trajectory=return_trajectory,
             verbose=verbose,
+            asecellfilter_kwargs=asecellfilter_kwargs,
         )
 
     def calculate(

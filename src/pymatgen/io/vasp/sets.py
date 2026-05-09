@@ -386,7 +386,8 @@ class VaspInputSet(InputGenerator, abc.ABC):
         )
 
     def as_dict(self, verbosity: int = 2) -> dict:
-        """
+        """Get the MSONable dict representation.
+
         Args:
             verbosity: Verbosity for generated dict. If 1, structure is
             excluded.
@@ -2522,7 +2523,8 @@ class MVLSlabSet(VaspInputSet):
         )
 
     def as_dict(self, verbosity: int = 2) -> dict[str, Any]:
-        """
+        """Get the MSONable dict representation.
+
         Args:
             verbosity (int): Verbosity of dict. e.g. whether to include Structure.
 
@@ -2708,7 +2710,8 @@ class NEBSet(VaspInputSet):
     def __init__(
         self, structures: list[Structure], unset_encut: bool = False, parent_set="MPRelaxSet", **kwargs
     ) -> None:
-        """
+        """Initialize a NEBSet.
+
         Args:
             structures: List of Structure objects.
             unset_encut (bool): Whether to unset ENCUT.
@@ -2864,7 +2867,8 @@ class MITNEBSet(NEBSet):
     """
 
     def __init__(self, structures: list[Structure], **kwargs) -> None:
-        """
+        """Initialize a MITNEBSet.
+
         Args:
             structures: List of Structure objects.
             **kwargs: Other kwargs supported by VaspInputSet.
