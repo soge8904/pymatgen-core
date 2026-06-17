@@ -745,11 +745,18 @@ class JOutStructure(Structure):
                 velocities = [v * bohr_to_ang if v is not None else None for v in velocities]
             for i in range(natoms):
                 self.append(species=names[i], coords=posns[i], coords_are_cartesian=True)
-            self.selective_dynamics = selective_dynamics
-            self.velocities = velocities
-            self.constraint_types = constraint_types
-            self.constraint_vectors = constraint_vectors
-            self.group_names = group_names_list
+            for prop, vals in zip(
+                ["selective_dynamics", "velocities", "constraint_types", "constraint_vectors", "group_names"],
+                [selective_dynamics, velocities, constraint_types, constraint_vectors, group_names_list],
+            ):
+                if not all(v is None for v in vals):
+                    setattr(self, prop, vals)
+                # self.add_site_property(prop, vals)
+            # self.selective_dynamics = selective_dynamics
+            # self.velocities = velocities
+            # self.constraint_types = constraint_types
+            # self.constraint_vectors = constraint_vectors
+            # self.group_names = group_names_list
             # Calling `self.species` is fairly expensive, so we create in manually like this to save compute time
             new_species = [Element(name) for name in names]
         return new_species if new_species is not None else cur_species

@@ -1254,18 +1254,17 @@ class JDFTXStructure(MSONable):
             validate_proximity=False,
             coords_are_cartesian=coords_are_cartesian,
         )
-        if velocities is not None and fill_site_properties:
-            struct.add_site_property("velocities", velocities)
-        if constraint_types is not None and fill_site_properties:
-            struct.add_site_property("constraint_types", constraint_types)
-        if constraint_vectors is not None and fill_site_properties:
-            struct.add_site_property("constraint_vectors", constraint_vectors)
-        if hyperplane_groups is not None and fill_site_properties:
-            struct.add_site_property("group_names", hyperplane_groups)
-        if selective_dynamics is not None and fill_site_properties:
-            struct.add_site_property(
-                "selective_dynamics", movescale_array_to_selective_dynamics_site_prop(selective_dynamics)
-            )
+        if fill_site_properties:
+            for prop, val in zip(
+                ["velocities", "constraint_types", "constraint_vectors", "group_names"],
+                [velocities, constraint_types, constraint_vectors, hyperplane_groups],
+            ):
+                if (not val is None) and (not all(x is None for x in val)):
+                    struct.add_site_property(prop, val)
+            if (not selective_dynamics is None) and (not all(x is None for x in selective_dynamics)):
+                struct.add_site_property(
+                    "selective_dynamics", movescale_array_to_selective_dynamics_site_prop(selective_dynamics)
+                )
         return cls(
             structure=struct,
             selective_dynamics=selective_dynamics,
